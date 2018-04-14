@@ -1,0 +1,192 @@
+<html>
+	<head>
+	    	<title></title>
+	    	<script src="files/deepnoodle.js"></script>
+	    	<script src="files/cytoscape.js"></script>
+	    	<script src="files/popper.min.js"></script>
+		<script src="files/cytoscape-popper.js"></script>
+		<script src="https://unpkg.com/tippy.js@2.0.9/dist/tippy.all.js"></script>
+	</head>
+	<style>
+	    #cy {
+	        width: 100%;
+	        height: 100%;
+	        position: absolute;
+	        top: 100px;
+	        left: 0px;
+	    }
+	    /* makes sticky faster; disable if you want animated tippies */
+		.tippy-popper {
+			transition: none !important;
+		}
+	</style>
+	<body>
+		<h2>Content</h2>
+		<button id = "clearButton" type="button" onclick="loadContent()">Reload</button>
+		<div id="clearError"></div>
+		<div hidden id="data" ></div>
+		<div id="cy"></div>
+		<script>
+	document.addEventListener('DOMContentLoaded', function() {
+		/*loadContent();*/
+	}, false);
+
+    var cy = cytoscape({
+        container: document.getElementById('cy'),
+       // pixelRatio: '1',
+        //hideEdgesOnViewport:true,
+        //textureOnViewport:true
+      });
+
+    cy.on('mouseover', 'node', function(event) {
+        var node = event.target;
+        node.tippy.show();
+    });
+    cy.on('mouseout', 'node', function(event) {
+        var node = event.target;
+        node.tippy.hide();
+    });
+     
+    
+	function loadContent() {
+		var xhttp = new XMLHttpRequest();
+		xhttp.onreadystatechange = function() {
+			
+			 if (this.readyState == 4 && this.status == 200) {
+				showGraph(JSON.parse(this.responseText));
+				document.getElementById("data").innerHTML = this.responseText;
+			} 
+			 /*else {
+				document.getElementById("clearError").innerHTML = this.responseText;
+			} */
+		};
+		xhttp.open("GET", "/content", true);
+		xhttp.send();
+	}
+	function makeTippy(node, text){
+		return tippy( node.popperRef(), {
+			html: (function(){
+				var div = document.createElement('div');
+
+				div.innerHTML = text;
+
+				return div;
+			})(),
+			trigger: 'manual',
+			arrow: true,
+			placement: 'bottom',
+			hideOnClick: false,
+			multiple: true,
+			sticky: true
+		} ).tooltips[0];
+	};
+
+	
+	function showGraph(json) {
+		var lastHits=json['lastHits'];
+		cy.elements().remove();
+		console.log(minmaxnavgCreatetime);
+		
+		var keyArr = Object.keys(lastHits);
+		var nodeCount=0;
+		
+        for ( var keyi = 0; keyi < keyArr.length; keyi++) {
+        		var threadId=keyArr[keyi];
+            var lastHitsList = lastHits[threadId];
+            
+            console.log("finding min max avg");
+	    		var minmaxnavgDuration=getMinMaxAvg(lastHitsList,'duration');
+	    		var minmaxnavgCreatetime=getMinMaxAvg(lastHitsList,'createTime');
+
+	    		console.log("adding nodes for thread:"+threadId);
+	    		lastHitsList.sort(function(a, b){return a.createTime-b.createTime});
+			for (var i = 0; i < lastHitsList.length; i++) {
+			    var hit = lastHitsList[i];
+				var duration=hit.duration;
+				var size=scaleBetween(duration,10,100,minmaxnavgDuration[0],minmaxnavgDuration[1]);
+				var time=scaleBetween(hit.createTime,1,100,minmaxnavgCreatetime[0],minmaxnavgCreatetime[1]);
+	
+				/* console.log(hit); */
+				
+	  		 	nodeCount++;
+				cy.add({
+					//group: "threadId_"+threadId,
+			        data: { 
+			        		id: hit.id
+			        		},
+					/* position: { x: i*10, y: 200 } */
+			        }
+			    );
+				
+				//console.log("node1"+node);
+				var sourceNodeId = hit.id;
+				var node=cy.nodes().getElementById(hit.id);
+				//console.log("node2"+node);
+				
+				var tippy=makeTippy(node,hit.methodName+'<br>duration:'+(getDuration(duration))+'<br>time (1-100):' + Math.round(time * 1000) / 1000);
+				node.tippy=tippy;
+				node.hit=hit;
+				
+				if(i===lastHitsList.length-1){
+					node.style({
+					      'background-color': 'red',
+					      'shape': 'triangle',
+					      'width':size,
+					      'height':size
+					    });
+				}else{
+					node.style({
+					      'background-color': 'green',
+					      'width':size,
+					      'height':size
+					    });
+				}
+				
+				if(i==0){
+					node.style({
+					      'shape': 'square',
+					      'background-color': 'yellow'
+				    });
+				}
+			}
+			
+		}
+        var edgeCount=0;
+        console.log("added nodes count:"+nodeCount);
+        for ( var keyi = 0; keyi < keyArr.length; keyi++) {
+	    		var threadId=keyArr[keyi];
+	        var lastHitsList = lastHits[threadId];
+			for (var i = 1; i < lastHitsList.length; i++) {
+				edgeCount++;
+			    var hit = lastHitsList[i];
+			    console.log(hit.callingHitId);
+				var targetNodeId = lastHitsList[i-1].id
+				if (hit.callingHitId != undefined && hit.callingHitId>0){
+					targetNodeId=hit.callingHitId;
+				}
+			
+			    cy.add({
+			        data: {
+			            id: 'edge_' + hit.id,
+			            source: sourceNodeId,
+			            target: targetNodeId,
+			            weight:time
+			        }
+			    });
+			}
+        }
+        console.log("added edges count:"+edgeCount);
+	    cy.layout({
+	    		 name:'preset' 
+	    		/*   name:'cose'  */ 
+	        /*   name: 'breadthfirst'    */
+	        /*  name: 'grid'  */
+	       /* name : 'tree' */
+	    }).run();
+	    console.log("layout finished");
+	}
+</script>
+		
+	</body>
+</html>
+
