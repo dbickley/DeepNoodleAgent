@@ -76,9 +76,9 @@ public class RestController extends BaseController {
 			case "all":
 				return JsonUtil.toJson(all(pathQueue, query));
 			case "memory":
-				return JsonUtil.toJson(memory(pathQueue, query));
+				return memory(pathQueue, query);
 			case "lastHitsByThreadId":
-				return JsonUtil.toJson(lastHitsByThreadId(pathQueue, query));
+				return lastHitsByThreadId(pathQueue, query);
 
 			default:
 				return null;
@@ -113,19 +113,19 @@ public class RestController extends BaseController {
 	}
 
 	private Object all(Queue<String> pathQueue, String query) throws HttpException {
-		Map<String, String> all = new HashMap<>();
+		Map<String, List<?>> all = new HashMap<>();
 
-		all.put("hits", JsonUtil.toJson(hits(pathQueue, query)));
+		all.put("hits", hits(pathQueue, query));
 
-		all.put("packages", JsonUtil.toJson(packages(pathQueue, query)));
+		all.put("packages", packages(pathQueue, query));
 
-		all.put("classes", JsonUtil.toJson(classes(pathQueue, query)));
+		all.put("classes", classes(pathQueue, query));
 
-		all.put("methods", JsonUtil.toJson(methods(pathQueue, query)));
+		all.put("methods", methods(pathQueue, query));
 
-		all.put("threads", JsonUtil.toJson(threads(pathQueue, query)));
+		all.put("threads", threads(pathQueue, query));
 
-		all.put("stacks", JsonUtil.toJson(stacks(pathQueue, query)));
+		all.put("stacks", stacks(pathQueue, query));
 
 		return new StringBuilder(JsonUtil.toJson(all));
 	}
@@ -212,6 +212,7 @@ public class RestController extends BaseController {
 		}
 
 		//build children
+		List<PackageResponseModel> response = new ArrayList<>();
 		Map<Long, PackageResponseModel> entitiesById = new HashMap<>();
 		for (PackageResponseModel entity : responseModels) {
 			entitiesById.put(entity.getId(), entity);
@@ -220,10 +221,12 @@ public class RestController extends BaseController {
 			PackageResponseModel parentEntity = entitiesById.get(entity.getParentPackageId());
 			if (parentEntity != null) {
 				parentEntity.getChildren().add(entity);
+			} else {
+				response.add(entity);
 			}
 		}
 
-		return responseModels;
+		return response;
 
 	}
 
@@ -270,7 +273,7 @@ public class RestController extends BaseController {
 				throw new HttpException(404, "Item can not be found");
 			}
 		} else {
-			entities = dao.select(1000, query);
+			entities = dao.select(null, query);
 		}
 		return entities;
 
@@ -292,7 +295,7 @@ public class RestController extends BaseController {
 		}
 	}
 
-	private StringBuilder lastHitsByThreadId(Queue<String> pathQueue, String query) {
+	private String lastHitsByThreadId(Queue<String> pathQueue, String query) {
 
 		List<HitEntity> lastHits = HitDao.instance.select(1000);
 
@@ -306,7 +309,7 @@ public class RestController extends BaseController {
 			list.add(hit);
 		}
 
-		return new StringBuilder(JsonUtil.toJson(lastHits));
+		return JsonUtil.toJson(lastHits);
 	}
 
 	private StringBuilder lastHitsParentChild(Queue<String> pathQueue, String query) {

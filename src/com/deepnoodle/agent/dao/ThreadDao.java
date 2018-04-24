@@ -14,7 +14,8 @@ public class ThreadDao extends BaseDao<ThreadEntity> {
 			"  `name` text NOT NULL, " +
 			"  `state` text NOT NULL, " +
 			"  `className` text  NOT NULL, " +
-			"  `createtime` INTEGER NOT NULL);";
+			"  `createtime` INTEGER NOT NULL);"
+			+ "CREATE unique INDEX threadId_idx ON package (threadId);";
 
 	protected String insertSql = "INSERT INTO thread("
 			+ "threadId, "

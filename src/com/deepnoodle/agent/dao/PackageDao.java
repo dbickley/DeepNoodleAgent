@@ -16,7 +16,8 @@ public class PackageDao extends BaseDao<PackageEntity> {
 			"  `parentPackageId` INTEGER NULL, " +
 			"  `name` text, " +
 			"  `createtime` INTEGER  NOT NULL "
-			+ ");";
+			+ ");"
+			+ "CREATE unique INDEX parentPackageId_name_idx ON package (parentPackageId,name);";
 
 	protected String insertSql = "INSERT INTO package("
 			+ " parentPackageId, "

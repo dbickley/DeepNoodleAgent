@@ -1,7 +1,8 @@
 package com.deepnoodle.agent.entity;
 
 public class HitEntity extends BaseEntity {
-
+	private long packageId;
+	private long classId;
 	private long methodId;
 	private long threadId;
 	private Long callingHitId;
@@ -9,6 +10,22 @@ public class HitEntity extends BaseEntity {
 	private String returned;
 	private long duration;
 	private Long endTime;
+
+	public long getClassId() {
+		return classId;
+	}
+
+	public void setClassId(long classId) {
+		this.classId = classId;
+	}
+
+	public long getPackageId() {
+		return packageId;
+	}
+
+	public void setPackageId(long packageId) {
+		this.packageId = packageId;
+	}
 
 	public long getMethodId() {
 		return methodId;
@@ -68,9 +85,10 @@ public class HitEntity extends BaseEntity {
 
 	@Override
 	public String toString() {
-		return "HitEntity [methodId=" + methodId + ", threadId=" + threadId + ", callingHitId=" + callingHitId
-				+ ", args=" + args + ", returned=" + returned + ", duration=" + duration + ", endTime=" + endTime
-				+ ", id=" + id + ", name=" + name + ", createTime=" + createTime + "]";
+		return "HitEntity [packageId=" + packageId + ", classId=" + classId + ", methodId=" + methodId + ", threadId="
+				+ threadId + ", callingHitId=" + callingHitId + ", args=" + args + ", returned=" + returned
+				+ ", duration=" + duration + ", endTime=" + endTime + ", id=" + id + ", name=" + name + ", createTime="
+				+ createTime + "]";
 	}
 
 }

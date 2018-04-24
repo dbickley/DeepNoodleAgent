@@ -2,9 +2,6 @@ package com.deepnoodle.agent.util;
 
 import java.lang.reflect.Type;
 
-import org.boon.json.JsonFactory;
-import org.boon.json.ObjectMapper;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -17,7 +14,7 @@ public class JsonUtil {
 			boolean sanitizeStrings) {
 		GsonBuilder gsonBuilder = new GsonBuilder()
 				.setExclusionStrategies(new GsonAnnotationExclusionStrategy());
-
+		gsonBuilder.setPrettyPrinting();
 		if (dateFormat != null) {
 			gsonBuilder.setDateFormat(dateFormat);
 		}
@@ -57,9 +54,9 @@ public class JsonUtil {
 
 	public static String toJson(Object object, boolean serializeNulls) {
 
-		//String json = getGson(serializeNulls, DATE_FORMAT_ISO6801, false).toJson(object);
-		ObjectMapper mapper = JsonFactory.create();
-		String json = mapper.writeValueAsString(object);
+		String json = getGson(serializeNulls, DATE_FORMAT_ISO6801, false).toJson(object);
+		//		ObjectMapper mapper = JsonFactory.create();
+		//		String json = mapper.writeValueAsString(object);
 		return json;
 	}
 

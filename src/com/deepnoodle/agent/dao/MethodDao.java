@@ -17,7 +17,8 @@ public class MethodDao extends BaseDao<MethodEntity> {
 			"  `isMethod` boolean  true, " +
 			"  `annotations` text  NULL, " +
 			"  `createtime` INTEGER  NOT NULL"
-			+ ");";
+			+ ");" +
+			"CREATE unique INDEX classId_name_idx ON package (classId,name);";
 
 	static String insertSql = "INSERT INTO method("
 			+ "classId, "

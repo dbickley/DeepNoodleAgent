@@ -69,9 +69,8 @@ public class MetricsCollector {
 				threadEntity.setClassName(currentThread.getClass().getName());
 				threadEntity.setState(currentThread.getState().toString());
 				threadEntity = ThreadDao.instance.insert(threadEntity);
-			} else {
-				hit.setThreadId(threadEntity.getId());
 			}
+			hit.setThreadId(threadEntity.getId());
 
 			Class<?> clazz = executable.getDeclaringClass();
 			String className = clazz.getSimpleName();
@@ -88,7 +87,7 @@ public class MetricsCollector {
 				}
 				parentPackageId = packageEntity.getId();
 			}
-
+			hit.setPackageId(parentPackageId);
 			ClassEntity classEntity = ClassDao.instance.findByNameAndPackageId(className, parentPackageId);
 			if (classEntity == null) {
 				classEntity = new ClassEntity();
@@ -96,7 +95,7 @@ public class MetricsCollector {
 				classEntity.setPackageId(parentPackageId);
 				ClassDao.instance.insert(classEntity);
 			}
-
+			hit.setClassId(classEntity.getId());
 			String methodName = executable.getName();
 			MethodEntity methodEntity = MethodDao.instance.findByMethodNameAndClassId(methodName, classEntity.getId());
 			if (methodEntity == null) {
@@ -111,58 +110,63 @@ public class MetricsCollector {
 
 			hit.setMethodId(methodEntity.getId());
 
-			Long callingHitId = null;
-			StackTraceElement[] stacktrace = currentThread.getStackTrace();
-			if (stacktrace.length > 3) {
-				stackTraceHitEntityMapLock.lock();
-				try {
-					Map<String, HitEntity> stackTraceHitEntityMap = stackTraceHitEntityMapThreadLocal.get();
+			//hit = calculateCallingHitId(hit, currentThread);
+		}
+		return hit;
+	}
 
-					if (stackTraceHitEntityMap != null) {
+	public static HitEntity calculateCallingHitId(HitEntity hit, Thread currentThread) {
+		Long callingHitId = null;
+		StackTraceElement[] stacktrace = currentThread.getStackTrace();
+		if (stacktrace.length > 3) {
+			stackTraceHitEntityMapLock.lock();
+			try {
+				Map<String, HitEntity> stackTraceHitEntityMap = stackTraceHitEntityMapThreadLocal.get();
 
-						HitEntity childHit = null;
-						int i = 3;
-						while (childHit == null && i < stacktrace.length) {
-							StackTraceElement parentStackTraceElement = stacktrace[i++];
-							String key = parentStackTraceElement.getClassName() + "."
-									+ parentStackTraceElement.getMethodName();
-							System.out.println("finding:" + key);
-							childHit = stackTraceHitEntityMap.get(key);
-							if (childHit != null) {
-								callingHitId = childHit.getId();
-							}
+				if (stackTraceHitEntityMap != null) {
+
+					HitEntity childHit = null;
+					int i = 3;
+					while (childHit == null && i < stacktrace.length) {
+						StackTraceElement parentStackTraceElement = stacktrace[i++];
+						String key = parentStackTraceElement.getClassName() + "."
+								+ parentStackTraceElement.getMethodName();
+						//System.out.println("finding:" + key);
+						childHit = stackTraceHitEntityMap.get(key);
+						if (childHit != null) {
+							callingHitId = childHit.getId();
 						}
-
 					}
-				} finally {
-					stackTraceHitEntityMapLock.unlock();
+
 				}
-			}
-
-			hit.setCallingHitId(callingHitId);
-
-			StackTraceElement thisStackTraceElement = null;
-			if (stacktrace.length > 2) {
-				thisStackTraceElement = stacktrace[2];
-			}
-			hit = HitDao.instance.insertHit(hit);
-
-			if (thisStackTraceElement != null) {
-				stackTraceHitEntityMapLock.lock();
-				try {
-					Map<String, HitEntity> stackTraceHitEntityMap = stackTraceHitEntityMapThreadLocal.get();
-					if (stackTraceHitEntityMap == null) {
-						stackTraceHitEntityMap = new HashMap<>();
-						stackTraceHitEntityMapThreadLocal.set(stackTraceHitEntityMap);
-					}
-					String key = thisStackTraceElement.getClassName() + "." + thisStackTraceElement.getMethodName();
-					System.out.println("adding:" + key);
-					stackTraceHitEntityMap.put(key, hit);
-				} finally {
-					stackTraceHitEntityMapLock.unlock();
-				}
+			} finally {
+				stackTraceHitEntityMapLock.unlock();
 			}
 		}
+
+		StackTraceElement thisStackTraceElement = null;
+		if (stacktrace.length > 2) {
+			thisStackTraceElement = stacktrace[2];
+		}
+		hit = HitDao.instance.insertHit(hit);
+
+		if (thisStackTraceElement != null) {
+			stackTraceHitEntityMapLock.lock();
+			try {
+				Map<String, HitEntity> stackTraceHitEntityMap = stackTraceHitEntityMapThreadLocal.get();
+				if (stackTraceHitEntityMap == null) {
+					stackTraceHitEntityMap = new HashMap<>();
+					stackTraceHitEntityMapThreadLocal.set(stackTraceHitEntityMap);
+				}
+				String key = thisStackTraceElement.getClassName() + "." + thisStackTraceElement.getMethodName();
+				//System.out.println("adding:" + key);
+				stackTraceHitEntityMap.put(key, hit);
+			} finally {
+				stackTraceHitEntityMapLock.unlock();
+			}
+		}
+
+		hit.setCallingHitId(callingHitId);
 		return hit;
 	}
 

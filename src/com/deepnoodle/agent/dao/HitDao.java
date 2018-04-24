@@ -10,6 +10,8 @@ public class HitDao extends BaseDao<HitEntity> {
 	public static HitDao instance = new HitDao();
 	public static String createTable = "CREATE TABLE `hit` (" +
 			"  `id` INTEGER PRIMARY KEY AUTOINCREMENT, " +
+			"  `packageId` INTEGER NOT NULL, " +
+			"  `classId` INTEGER NOT NULL, " +
 			"  `methodId` INTEGER NOT NULL, " +
 			"  `callingHitId` INTEGER NULL, " +
 			"  `threadId` INTEGER NOT NULL, " +
@@ -21,6 +23,8 @@ public class HitDao extends BaseDao<HitEntity> {
 			+ ");";
 
 	static String insertSql = "INSERT INTO hit("
+			+ "packageId,"
+			+ "classId,"
 			+ "methodId,"
 			+ "threadId,"
 			+ "callingHitId,"
@@ -29,10 +33,12 @@ public class HitDao extends BaseDao<HitEntity> {
 			+ "duration,"
 			+ "createtime, "
 			+ "endtime "
-			+ ") values(?,?,?,?,?,?,?,?) ;";
+			+ ") values(?,?,?,?,?,?,?,?,?,?) ;";
 
 	static String selectSql = "SELECT "
 			+ "id, "
+			+ "packageId,"
+			+ "classId,"
 			+ "methodId,"
 			+ "threadId,"
 			+ "callingHitId,"
@@ -67,18 +73,19 @@ public class HitDao extends BaseDao<HitEntity> {
 		dbLock.writeLock().lock();
 		try (PreparedStatement statement = getConnection().prepareStatement(insertSql)) {
 			entity.setCreateTime(System.nanoTime());
-
-			statement.setLong(1, entity.getMethodId());
-			statement.setLong(2, entity.getThreadId());
+			statement.setLong(1, entity.getPackageId());
+			statement.setLong(2, entity.getClassId());
+			statement.setLong(3, entity.getMethodId());
+			statement.setLong(4, entity.getThreadId());
 			if (entity.getCallingHitId() != null) {
-				statement.setLong(3, entity.getCallingHitId());
+				statement.setLong(5, entity.getCallingHitId());
 			}
-			statement.setString(4, entity.getArgs());
-			statement.setString(5, entity.getReturned());
-			statement.setLong(6, entity.getDuration());
-			statement.setLong(7, entity.getCreateTime());
+			statement.setString(6, entity.getArgs());
+			statement.setString(7, entity.getReturned());
+			statement.setLong(8, entity.getDuration());
+			statement.setLong(9, entity.getCreateTime());
 			if (entity.getEndTime() != null) {
-				statement.setLong(8, entity.getEndTime());
+				statement.setLong(10, entity.getEndTime());
 			}
 
 			executeInsert(statement, entity, insertSql);
@@ -149,6 +156,8 @@ public class HitDao extends BaseDao<HitEntity> {
 			entity = new HitEntity();
 		}
 		entity.setId(rs.getLong("id"));
+		entity.setPackageId(rs.getLong("packageId"));
+		entity.setClassId(rs.getLong("classId"));
 		entity.setMethodId(rs.getLong("methodId"));
 		entity.setCallingHitId(rs.getLong("callingHitId"));
 		entity.setThreadId(rs.getLong("threadId"));

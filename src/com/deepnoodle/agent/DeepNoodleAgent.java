@@ -18,6 +18,7 @@ import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.agent.builder.AgentBuilder.InitializationStrategy;
 import net.bytebuddy.agent.builder.AgentBuilder.Transformer;
 import net.bytebuddy.agent.builder.AgentBuilder.TypeStrategy;
+import net.bytebuddy.agent.builder.ResettableClassFileTransformer;
 import net.bytebuddy.asm.Advice;
 import net.bytebuddy.asm.AsmVisitorWrapper;
 import net.bytebuddy.description.type.TypeDescription;
@@ -28,6 +29,8 @@ import net.bytebuddy.utility.JavaModule;
 public class DeepNoodleAgent {
 	private static int HEARTBEAT = 10;
 	private static AgentWebServer webServer;
+	private static ResettableClassFileTransformer agentBuilder;
+	private static Instrumentation instrumentation;
 
 	public static void premain(String args, Instrumentation instrumentation) throws SQLException {
 		go(args, instrumentation);
@@ -40,6 +43,7 @@ public class DeepNoodleAgent {
 
 	private static void go(String args, Instrumentation instrumentation) throws SQLException {
 		System.out.println("[Agent] Start agent during JVM startup using argument '-javaagent'");
+		DeepNoodleAgent.instrumentation = instrumentation;
 		BaseDao.init();
 
 		//Capture threads every HEARTBEAT seconds starting now
@@ -58,19 +62,21 @@ public class DeepNoodleAgent {
 
 		}, 0, HEARTBEAT, TimeUnit.SECONDS);
 
-		new AgentBuilder.Default()
-				.type(ElementMatchers.any())
-				.transform(new MetricsTransformer())
-				.with(AgentBuilder.Listener.StreamWriting.toSystemOut())
-				//.ignore(ElementMatchers.noneOf(Thread.class))
-				//.with(RedefinitionStrategy.RETRANSFORMATION)
-				//.with(CircularityLock.Global.class)
-				.with(InitializationStrategy.NoOp.INSTANCE)
-				.with(TypeStrategy.Default.REDEFINE)
-				.with(AgentBuilder.RedefinitionStrategy.REDEFINITION)
+		if (agentBuilder == null) {
+			agentBuilder = new AgentBuilder.Default()
+					.type(ElementMatchers.nameStartsWith("com.conenza")
+							.or(ElementMatchers.nameStartsWith("com.liferay")))
+					.transform(new MetricsTransformer())
+					//.with(AgentBuilder.Listener.StreamWriting.toSystemOut())
+					//.ignore(ElementMatchers.noneOf(Thread.class))
+					//.with(RedefinitionStrategy.RETRANSFORMATION)
+					//.with(CircularityLock.Global.class)
+					.with(InitializationStrategy.NoOp.INSTANCE)
+					.with(TypeStrategy.Default.REDEFINE)
+					.with(AgentBuilder.RedefinitionStrategy.REDEFINITION)
 
-				.installOn(instrumentation);
-
+					.installOn(instrumentation);
+		}
 		if (webServer == null) {
 			try {
 				webServer = new AgentWebServer();
@@ -93,10 +99,10 @@ public class DeepNoodleAgent {
 				final TypeDescription typeDescription,
 				final ClassLoader classLoader,
 				final JavaModule module) {
-			if (!typeDescription.getName().startsWith(this.getClass().getPackage().getName())
-					&& (typeDescription.getName().startsWith("com.conenza")
-							|| typeDescription.getName().startsWith("com.liferay")
-							|| typeDescription.getName().startsWith("com.deepnoodle"))) {
+			if (!typeDescription.getName().startsWith(this.getClass().getPackage().getName())) {
+				//				&& (typeDescription.getName().startsWith("com.conenza")
+				//						|| typeDescription.getName().startsWith("com.liferay")
+				//						|| typeDescription.getName().startsWith("com.deepnoodle"))
 				final AsmVisitorWrapper constructorVistor = Advice
 						.to(EnterAdviceConstructors.class, ExitAdviceConstructors.class)
 						.on(ElementMatchers.isConstructor());
@@ -135,7 +141,7 @@ public class DeepNoodleAgent {
 				builder = builder.visit(Advice.to(ThreadStartInterceptor.class).on(ElementMatchers.named("start")));
 			} else {
 
-				System.out.println("ignoring:" + typeDescription.getName());
+				//System.out.println("ignoring:" + typeDescription.getName());
 			}
 
 			//			else {

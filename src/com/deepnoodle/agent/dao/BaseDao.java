@@ -171,19 +171,19 @@ public abstract class BaseDao<T> {
 
 	protected void executeInsert(PreparedStatement statement, BaseEntity entity, String sql)
 			throws SQLException {
-		System.out.println("inserting: " + entity.toString());
-		System.out.println("sql: " + sql);
+		//System.out.println("inserting: " + entity.toString());
+		//System.out.println("sql: " + sql);
 		statement.executeUpdate();
 		addPrimaryKeyToObject(entity, statement);
 	}
 
 	protected ResultSet executeSelect(PreparedStatement statement, String sql) throws SQLException {
-		System.out.println("sql: " + sql);
+		//System.out.println("sql: " + sql);
 		return statement.executeQuery();
 	}
 
 	protected void executeUpdate(PreparedStatement statement, String sql) throws SQLException {
-		System.out.println("sql: " + sql);
+		//System.out.println("sql: " + sql);
 		statement.executeUpdate();
 	}
 

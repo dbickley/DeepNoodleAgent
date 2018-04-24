@@ -13,8 +13,9 @@ public class ClassDao extends BaseDao<ClassEntity> {
 			"  `id` INTEGER PRIMARY KEY AUTOINCREMENT, " +
 			"  `packageId` INTEGER NOT NULL, " +
 			"  `name` text NOT NULL, " +
-			"  `createtime` INTEGER  NOT NULL"
-			+ ");";
+			"  `createtime` INTEGER  NOT NULL" +
+			");" +
+			"CREATE unique INDEX packageId_name_idx ON package (packageId,name);";
 
 	static String insertSql = "INSERT INTO class("
 			+ "packageId,"
